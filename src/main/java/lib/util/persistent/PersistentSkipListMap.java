@@ -41,35 +41,16 @@
 
 package lib.util.persistent;
 
-import lib.util.persistent.types.*;
-import lib.util.persistent.types.Types;
-import lib.util.persistent.types.ArrayType;
-import lib.util.persistent.types.ReferenceArrayType;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.AbstractMap;
-import java.util.Random;
-import java.util.function.BiFunction;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.function.Consumer;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.NavigableSet;
-import java.util.List;
-import java.util.AbstractSet;
-import java.util.Iterator;
-import java.util.Spliterator;
-import java.util.ArrayList;
-import java.util.Set;
-import java.util.AbstractCollection;
-import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicReference;
 import lib.util.persistent.front.PersistentClass;
-import static lib.util.persistent.Util.*;
+import lib.util.persistent.types.*;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class PersistentSkipListMap<K extends AnyPersistent, V extends AnyPersistent> extends PersistentObject implements ConcurrentNavigableMap<K,V>, PersistentSortedMap<K,V> {
     private KeySet<K> keySet;
@@ -78,7 +59,7 @@ public class PersistentSkipListMap<K extends AnyPersistent, V extends AnyPersist
     private Values<V> values;
     private ConcurrentNavigableMap<K,V> descendingMap;
 
-    final Comparator<? super K> comparator;
+    Comparator<? super K> comparator;
     Comparator<? super K> sister_comparator;
 
     private static final FinalObjectField<PersistentAtomicReference> HEAD = new FinalObjectField<>(PersistentAtomicReference.class);
@@ -1297,6 +1278,10 @@ public class PersistentSkipListMap<K extends AnyPersistent, V extends AnyPersist
 
     public Comparator<? super K> comparator() {
         return comparator;
+    }
+
+    public void setComparator(Comparator<? super K> comparator) {
+        this.comparator = comparator;
     }
 
     public K firstKey() {

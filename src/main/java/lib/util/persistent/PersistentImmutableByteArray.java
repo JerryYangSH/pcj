@@ -22,9 +22,11 @@
 
 package lib.util.persistent;
 
-import lib.util.persistent.types.Types;
 import lib.util.persistent.types.ArrayType;
 import lib.util.persistent.types.ReferenceArrayType;
+import lib.util.persistent.types.Types;
+
+import java.util.Arrays;
 
 public final class PersistentImmutableByteArray extends AbstractPersistentImmutableArray {
     private static final ArrayType<PersistentImmutableByteArray> TYPE = new ReferenceArrayType<>(PersistentImmutableByteArray.class, Types.BYTE);
@@ -45,5 +47,27 @@ public final class PersistentImmutableByteArray extends AbstractPersistentImmuta
         byte[] ans = new byte[length()];
         PersistentArrays.toByteArray(this, ans, ans.length);
         return ans;
+    }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(toArray());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof PersistentByteArray)) {
+            return false;
+        }
+        PersistentByteArray o = (PersistentByteArray) obj;
+        if (length() != o.length()) {
+            return false;
+        }
+        for (int i = 0; i < length(); i++) {
+            if (get(i) != o.get(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

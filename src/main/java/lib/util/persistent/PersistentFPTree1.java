@@ -41,34 +41,15 @@
 
 package lib.util.persistent;
 
-import lib.util.persistent.types.*;
+import lib.util.persistent.types.IntField;
+import lib.util.persistent.types.ObjectField;
 import lib.util.persistent.types.ObjectType;
 
-import java.util.AbstractMap;
-import java.util.AbstractSet;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.StampedLock;
-
-import java.util.Map;
-import java.util.NavigableSet;
-import java.util.NoSuchElementException;
-import java.util.Random;
-import java.util.Set;
-import java.util.SortedMap;
-import java.util.Spliterator;
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.AbstractCollection;
 
 public class PersistentFPTree1<K extends AnyPersistent, V extends AnyPersistent> extends PersistentObject implements ConcurrentNavigableMap<K,V>, PersistentSortedMap <K, V> {
 	private Node<K, V> root;
@@ -82,7 +63,7 @@ public class PersistentFPTree1<K extends AnyPersistent, V extends AnyPersistent>
 	private final int MAX_LEAF_KEYS;
 	private final int MIN_LEAF_KEYS;
 
-	private final Comparator<? super K> comparator;
+	private Comparator<? super K> comparator;
 
 	private static final int[] PEARSON_LOOKUP_TABLE = {
 			110, 228, 235, 91, 67, 211, 45, 46, 79, 23, 118, 48, 32, 208, 251, 0, 255, 128, 174, 238, 94, 27, 13, 121, 66, 168, 165, 125, 25, 
@@ -425,6 +406,10 @@ public class PersistentFPTree1<K extends AnyPersistent, V extends AnyPersistent>
 	@Override
 	public Comparator<? super K> comparator() {
 		return this.comparator;
+	}
+
+	public void comparator(final Comparator<? super K> comparator) {
+		this.comparator = comparator;
 	}
 
 	// end of interface methods
