@@ -11,6 +11,7 @@ import java.util.function.Function;
 public class BasicBenchmarkTest {
     private final static boolean enableTimerTest = true;
     private final static boolean enableAssert = false;
+    private final static boolean enableVerify = false;
     private static boolean verbose = false;
     private final static long maxKeyCount = 100000;
     private final static int keySize = 16;
@@ -65,7 +66,7 @@ public class BasicBenchmarkTest {
                 testBenchmarkTimeBound("PersistentFPTree2", getPersistentFPTree2());
             } else {
                 //testBenchmarkCounterBased("PersistentSkipListMap", getPersistentSkipListMap());
-                testBenchmarkCounterBased("PersistentSkipListMap2", getPersistentSkipListMap2());
+                //testBenchmarkCounterBased("PersistentSkipListMap2", getPersistentSkipListMap2());
                 //testBenchmarkCounterBased("PersistentFPTree1", getPersistentFPTree1());
                 testBenchmarkCounterBased("PersistentFPTree2", getPersistentFPTree2());
             }
@@ -138,8 +139,8 @@ public class BasicBenchmarkTest {
             long start = System.nanoTime();
             for (int l = 0; l < LoopCount; l++) {
                 PersistentString key = new PersistentString(keyPrefix + l);
-                //PersistentString val = new PersistentString(valuePrefix + l);
-                PersistentString out = map.put(key, magicInitValue);
+                PersistentString val = new PersistentString(valuePrefix + l);
+                PersistentString out = map.put(key, val);
                 if (out != null) {
                     System.out.println(String.format("CREATING key %s failed, out = %s", keyPrefix + l, out.toString()));
                 }
@@ -161,6 +162,9 @@ public class BasicBenchmarkTest {
                 PersistentString key = new PersistentString(keyPrefix + l);
                 PersistentString out = map.put(key, magicUpdateValue);
                 assert(out.toString().equals(valuePrefix + l));
+                if (enableVerify) {
+                    assert map.get(key).equals(magicUpdateValue);
+                }
             }
             latencies.put("UPDATE", (System.nanoTime() - start) / LoopCount);
 
@@ -169,6 +173,9 @@ public class BasicBenchmarkTest {
             for (int l = 0; l < LoopCount; l++) {
                 PersistentString key = new PersistentString(keyPrefix + l);
                 map.remove(key);
+                if (enableVerify) {
+                    assert map.get(key) == null;
+                }
             }
             latencies.put("DELETE", (System.nanoTime() - start) / LoopCount);
 
@@ -201,10 +208,10 @@ public class BasicBenchmarkTest {
         map.clear();
         assert(map.size() == 0);
 
-        AtomicBoolean stop = new AtomicBoolean(false);
+        final AtomicBoolean stop = new AtomicBoolean(false);
         final int[] timeSeconds = new int[] {10, 60, 300};
         for (int timeSecond : timeSeconds) {
-            System.out.println(String.format("[Timer Bound Test %6ds] avg lat:", timeSecond));
+            System.out.println(String.format("[Time Bound Test %6ds] avg lat:", timeSecond));
             map.clear();
             assert(map.size() == 0);
             Map<String, Long> latencies = new HashMap<>();
@@ -255,6 +262,7 @@ public class BasicBenchmarkTest {
             while (true) {
                 final String keyId = keyPrefix + (loopCount % maxKeyCount);
                 PersistentString out = this.fn.apply(keyId);
+                loopCount++;
                 if ("CREATE".equals(name)) {
                     if (out != null) {
                         errorCount++;
@@ -276,14 +284,16 @@ public class BasicBenchmarkTest {
                         assert (out != null);
                     }
                 }
-                loopCount++;
 
                 if ("CREATE".equals(name)) {
                     // Create enough keys before following read and update.
-                    if (loopCount < maxKeyCount) continue;
+                    if (loopCount >= maxKeyCount) break;
 
-                    // stop create now
-                    break;
+                    // go on, ignore stop signal.
+                    continue;
+                } else if ("DELETE".equals(name)) {
+                    // all keys are deleted, call it done
+                    if (loopCount >= maxKeyCount) break;
                 }
                 if (stop.get()) { break; }
             }
