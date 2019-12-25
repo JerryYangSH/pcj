@@ -493,12 +493,12 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 	}
 
 	public K floorKey(K key) {
-		Map.Entry<K,V> e = getNeighbourEntry(key, false, false, true);
+		Map.Entry<K,V> e = getNeighbourEntry(key, false, true, true);
 		return (e == null) ? null : e.getKey();
 	}
 
 	public K ceilingKey(K key) {
-		Map.Entry<K,V> e = getNeighbourEntry(key, false, true, true);
+		Map.Entry<K,V> e = getNeighbourEntry(key, false, false, true);
 		return (e == null) ? null : e.getKey();
 	}
 
@@ -510,12 +510,10 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 		return getNeighbourEntry(key, true, false, false);
 	}
 
-	public Map.Entry<K,V> floorEntry(K key) {
-		return getNeighbourEntry(key, true, false, true);
-	}
+	public Map.Entry<K,V> floorEntry(K key) { return getNeighbourEntry(key, true, true, true); }
 
 	public Map.Entry<K,V> ceilingEntry(K key) {
-		return getNeighbourEntry(key, true, true, true);
+		return getNeighbourEntry(key, true, false, true);
 	}
 
 	@Override
