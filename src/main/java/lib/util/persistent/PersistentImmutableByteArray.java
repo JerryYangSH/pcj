@@ -56,10 +56,13 @@ public final class PersistentImmutableByteArray extends AbstractPersistentImmuta
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof PersistentByteArray)) {
+        if (!(obj instanceof PersistentImmutableByteArray)) {
             return false;
         }
-        PersistentByteArray o = (PersistentByteArray) obj;
+        if (this == obj) {
+            return true;
+        }
+        PersistentImmutableByteArray o = (PersistentImmutableByteArray) obj;
         if (length() != o.length()) {
             return false;
         }
