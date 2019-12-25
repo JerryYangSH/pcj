@@ -356,7 +356,7 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 
 	public boolean replace(K key, V oldValue, V newValue) {
 		if (key == null || oldValue == null || newValue == null) throw new NullPointerException();
-		return doReplace(key, oldValue, newValue) == oldValue;
+		return oldValue.equals(doReplace(key, oldValue, newValue));
 	}
 
 	public boolean equals(AnyPersistent o) {
@@ -592,6 +592,7 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 		
 		public boolean isAboveHighKey(K key) {
 			if(key == null) throw new NullPointerException();
+			if (hi == null) { return false; }
 			int h = compareKeys(key, hi);
 			return !((h < 0) || (h <= 0 && hiInclusive));
 		}
@@ -625,7 +626,11 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 
 		try {
 			while (!parent.isLeaf) {
-				child = ((InternalNode<K,V>) parent).getChild(kRange.lo);
+				if (kRange.lo == null) {
+					child = ((InternalNode<K, V>) parent).get(true);
+				} else {
+					child = ((InternalNode<K, V>) parent).getChild(kRange.lo);
+				}
 				stampChild = child.applyLock(isWriteLock);
 				parent.unlock(stampParent);
 				parent = child;
@@ -1154,7 +1159,7 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 		}
 	}
 
-	private V replaceInLeaf(LeafNode<K,V> leafNode, K key, V oldValue, V newValue) {
+	private V replaceInLeaf(LeafNode<K,V> leafNode, final K key, final V oldValue, final V newValue) {
 		final int hash = generateHash(key);
 		// scan for empty/matching slots
 		for (int slot = MAX_LEAF_KEYS; slot >= 0; slot--) {
@@ -1162,10 +1167,10 @@ public class PersistentFPTree2<K extends AnyPersistent, V extends AnyPersistent>
 			if (slotHash == hash) {
 				if (key.equals(leafNode.keys.get(slot))) {
 					V value = leafNode.leaf.getSlot(slot).getValue();
-					if (oldValue == null || (oldValue != null && oldValue == value)) {
+					if (oldValue == null || (oldValue.equals(value))) {
 						final int slotToPut = slot;
 						Transaction.run(() -> {
-							leafNode.leaf.getSlot(slotToPut).setValue(value);
+							leafNode.leaf.getSlot(slotToPut).setValue(newValue);
 							if (leafNode.keycount == 0)
 								leafNode.leaf.setIsEmpty(false);
 						});
