@@ -21,15 +21,15 @@
 
 package lib.util.persistent;
 
-import java.util.Random;
 import lib.util.persistent.spi.PersistentMemoryProvider;
-import lib.xpersistent.XHeap;
-import static lib.util.persistent.Trace.*;
 import lib.util.persistent.types.ObjectType;
-import java.util.function.Supplier;
+import lib.xpersistent.XHeap;
+
+import java.util.Random;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
-import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 public class Util {
 
