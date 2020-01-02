@@ -76,7 +76,9 @@ public class ObjectCache {
                     // trace(true, ref.getAddress(), "object enqueued and processing");
                     if (Config.ENABLE_MEMORY_STATS) Stats.current.memory.enqueued++;
                         AnyPersistent obj = get(address, true);
-                        obj.deleteReference(true);
+                        if (obj != null) {
+                            obj.deleteReference(true);
+                        }
                 }
             } 
             catch (InterruptedException ie) {
@@ -135,6 +137,7 @@ public class ObjectCache {
                 if (Config.ENABLE_OBJECT_CACHE_STATS) {if (ref == null) Stats.current.objectCache.simpleMisses++; else Stats.current.objectCache.referentMisses++;}  // uncomment for ObjectCache stats
                 boolean admin = ObjectCache.adminMode.get() || forAdmin;
                 ref = objectForAddress(address, admin);
+                if (ref == null) return null;
                 obj = (T)ref.get();
                 if (Config.ENABLE_OBJECT_CACHE_STATS) updateCacheSizeStats();                       // uncomment for ObjectCache stats
             }
@@ -166,7 +169,7 @@ public class ObjectCache {
         Stats.current.objectCache.maxSize = size;
     }
 
-    @SuppressWarnings("unchecked")
+    //@SuppressWarnings("unchecked")
     static <T extends AnyPersistent> Ref<T> objectForAddress(long address, boolean forAdmin) {
         final Address addr =  new Address(address);
         return Util.synchronizedBlock(cacheLock, ()->{ 
@@ -181,9 +184,10 @@ public class ObjectCache {
             MemoryRegion region = new UncheckedPersistentMemoryRegion(address);
             long classInfoAddress = region.getLong(0);
             ClassInfo ci = ClassInfo.getClassInfo(classInfoAddress);
+            if (ci == null) return ans;
             ObjectType<T> type = Types.typeForName(ci.className());
-            obj = AnyPersistent.reconstruct(new ObjectPointer<T>((ObjectType)type, region));
-            ans = new Ref(obj, forAdmin);
+            obj = AnyPersistent.reconstruct(new ObjectPointer<T>(type, region));
+            ans = new Ref<>(obj, forAdmin);
             if (!Transaction.addReconstructedObject(address, ans)) cache.put(addr, ans);
         }
         return ans; 
@@ -215,13 +219,17 @@ public class ObjectCache {
     }
 
     public static void uncommittedConstruction(AnyPersistent obj) {
-        uncommittedConstructions.add(obj.addr());
-        // trace(true, obj.addr(), "added uncommitedConstruction");
+        if (obj != null) {
+            uncommittedConstructions.add(obj.addr());
+            // trace(true, obj.addr(), "added uncommitedConstruction");
+        }
     }
 
     public static void committedConstruction(AnyPersistent obj) {
-        // trace(obj.addr(), "committedConstruction called");
-        uncommittedConstructions.remove(obj.addr());
+        if (obj != null) {
+            // trace(obj.addr(), "committedConstruction called");
+            uncommittedConstructions.remove(obj.addr());
+        }
     }
 
     public static class Address {

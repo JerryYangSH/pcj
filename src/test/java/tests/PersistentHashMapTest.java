@@ -42,6 +42,7 @@ public class PersistentHashMapTest {
         System.out.println("****************PersistentHashMap Tests****************");
         return testInsertion() &&
         testRemoval() &&
+        //testBenchmark(getHashMap2()) &&
         testIteration();
     }
 
@@ -59,6 +60,17 @@ public class PersistentHashMapTest {
  		}
  		return map;
  	}
+
+    @SuppressWarnings("unchecked")
+    private static PersistentHashMap<PersistentString, PersistentString> getHashMap2() {
+        String id = threadSafeId("tests.PersistentHashMap");
+        PersistentHashMap<PersistentString, PersistentString> map = ObjectDirectory.get(id,PersistentHashMap.class);
+        if(map == null) {
+            map = new PersistentHashMap<>();
+            ObjectDirectory.put(id, map);
+        }
+        return map;
+    }
 
     @SuppressWarnings("unchecked")
     public static boolean testInsertion() {
@@ -221,6 +233,82 @@ public class PersistentHashMapTest {
         map.remove(key5);
         map.remove(key6);
 
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static boolean testBenchmark(PersistentHashMap<PersistentString, PersistentString> map) {
+        System.out.println(String.format("****************Testing benchmark %s**********************", map.getClass().getSimpleName()));
+
+        assert (map != null);
+        //map.clear();
+        assert(map.size() == 0);
+
+        final int KeySize = 128;
+        final int ValueSize = 1024;
+        StringBuilder keyPrefixBuilder = new StringBuilder();
+        for (int i = 0; i < KeySize; i++) {
+            keyPrefixBuilder.append('~');
+        }
+        String keyPrefix = keyPrefixBuilder.toString();
+        StringBuilder valuePrefixBuilder = new StringBuilder();
+        for (int i = 0; i < ValueSize; i++) {
+            valuePrefixBuilder.append('&');
+        }
+        String valuePrefix = valuePrefixBuilder.toString();
+
+        final int[] LoopCounts = new int[] {1000, 10000, 50000};
+        for (int LoopCount : LoopCounts) {
+            System.out.println(String.format("[Key Count %6d] avg lat:", LoopCount));
+            //map.clear();
+            assert(map.size() == 0);
+            Map<String, Long> latencies = new HashMap<>();
+
+            // CREATE:
+            long start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                PersistentString val = new PersistentString(valuePrefix + l);
+                PersistentString out = map.put(key, val);
+                if (out != null) {
+                    System.out.println(String.format("CREATING key %s failed, out = %s", keyPrefix + l, out.toString()));
+                }
+                assert(out == null);
+            }
+            latencies.put("CREATE", (System.nanoTime() - start) / LoopCount);
+
+            // GET
+            start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                assert(map.get(key).toString().equals(valuePrefix + l));
+            }
+            latencies.put("GET", (System.nanoTime() - start) / LoopCount);
+
+            // UPDATE
+            start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                PersistentString val = new PersistentString(valuePrefix);
+                PersistentString out = map.put(key, val);
+                assert(out.toString().equals(valuePrefix + l));
+            }
+            latencies.put("UPDATE", (System.nanoTime() - start) / LoopCount);
+
+            // DELETE
+            start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                PersistentString out = map.remove(key);
+            }
+            latencies.put("DELETE", (System.nanoTime() - start) / LoopCount);
+
+            for (Map.Entry<String, Long> lat : latencies.entrySet()) {
+                System.out.println(String.format("\t%8s : %8d (us)", lat.getKey(), lat.getValue() / 1000));
+            }
+        }
+
+        //map.clear();
         return true;
     }
  }

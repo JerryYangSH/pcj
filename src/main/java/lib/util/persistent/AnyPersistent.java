@@ -186,7 +186,9 @@ public abstract class AnyPersistent {
         return region;
     }
 
-    long addr() {return region.addr();}
+    long addr() {
+        return region == null ? 0L : region.addr();
+    }
 
     void onReconstruction() {}
     void onSet() {}
@@ -475,17 +477,22 @@ public abstract class AnyPersistent {
                     ArrayList<ObjectCache.Ref<AnyPersistent>> children = new ArrayList<>();
                     while (childAddresses.hasNext()) {
                         long childAddress = childAddresses.next();
-                        children.add(ObjectCache.getReference(childAddress, true));
+                        ObjectCache.Ref<AnyPersistent> ref = ObjectCache.getReference(childAddress, true);
+                        if (ref != null) {
+                            children.add(ref);
+                        }
                     }
                     for (ObjectCache.Ref<AnyPersistent> childRef : children) {
                         AnyPersistent child = childRef.get();
                         Transaction.run(() -> {
-                            long childAddr = child.addr();
-                            int crc = child.decRefCount();
-                            if (crc == 0 && childRef.isForAdmin()) {
-                                addrsToDelete.push(childAddr);
-                            } else {
-                                //CycleCollector.addCandidate(childAddr);
+                            if (child != null) {
+                                long childAddr = child.addr();
+                                int crc = child.decRefCount();
+                                if (crc == 0 && childRef.isForAdmin()) {
+                                    addrsToDelete.push(childAddr);
+                                } else {
+                                    //CycleCollector.addCandidate(childAddr);
+                                }
                             }
                         }, child);
                     }
@@ -504,7 +511,9 @@ public abstract class AnyPersistent {
     public static void deleteResidualReferences(long address) {
         // trace(true, address, "deleteResidualReferences: %d", count);
         AnyPersistent obj = ObjectCache.get(address, true);
-        obj.deleteReference(false);
+        if (obj != null) {
+            obj.deleteReference(false);
+        }
     }
 
     static String classNameForRegion(MemoryRegion reg) {

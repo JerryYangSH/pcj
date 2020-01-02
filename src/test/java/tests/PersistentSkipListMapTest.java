@@ -43,6 +43,9 @@ static boolean verbose = false;
         System.out.println("****************PersistentSkipListMap Tests************");
         return testInsertion() &&
         testRemoval() &&
+        testReplace() &&
+        //testBenchmark(getPersistentSkipListMap()) &&
+        //testBenchmark(getPersistentSkipListMap2()) &&
         testIteration() &&
         testSubMap() &&
         testPutAll() &&
@@ -63,6 +66,39 @@ static boolean verbose = false;
  		}
  		return map;
  	}
+
+    @SuppressWarnings("unchecked")
+    private static PersistentSkipListMap2<PersistentInteger, PersistentString> getSkipListMap2() {
+        String id = threadSafeId("tests.persistent_skiplist_map");
+        PersistentSkipListMap2<PersistentInteger, PersistentString> map = ObjectDirectory.get(id,PersistentSkipListMap2.class);
+        if(map == null) {
+            map = new PersistentSkipListMap2<>();
+            ObjectDirectory.put(id, map);
+        }
+        return map;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static PersistentSkipListMap<PersistentString, PersistentString> getPersistentSkipListMap() {
+        String id = threadSafeId("tests.PersistentSkipListMap");
+        PersistentSkipListMap<PersistentString, PersistentString> map = ObjectDirectory.get(id,PersistentSkipListMap.class);
+        if(map == null) {
+            map = new PersistentSkipListMap<>();
+            ObjectDirectory.put(id, map);
+        }
+        return map;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static PersistentSkipListMap2<PersistentString, PersistentString> getPersistentSkipListMap2() {
+        String id = threadSafeId("tests.PersistentSkipListMap2");
+        PersistentSkipListMap2<PersistentString, PersistentString> map = ObjectDirectory.get(id,PersistentSkipListMap2.class);
+        if(map == null) {
+            map = new PersistentSkipListMap2<>();
+            ObjectDirectory.put(id, map);
+        }
+        return map;
+    }
 
     @SuppressWarnings("unchecked")
     public static boolean testInsertion() {
@@ -90,6 +126,82 @@ static boolean verbose = false;
 
         //System.out.println("size is " +map.size());
         //map.clear();
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static boolean testBenchmark(PersistentSortedMap<PersistentString, PersistentString> map) {
+        System.out.println(String.format("****************Testing benchmark %s**********************", map.getClass().getSimpleName()));
+
+        assert (map != null);
+        map.clear();
+        assert(map.size() == 0);
+
+        final int KeySize = 128;
+        final int ValueSize = 1024;
+        StringBuilder keyPrefixBuilder = new StringBuilder();
+        for (int i = 0; i < KeySize; i++) {
+            keyPrefixBuilder.append('~');
+        }
+        String keyPrefix = keyPrefixBuilder.toString();
+        StringBuilder valuePrefixBuilder = new StringBuilder();
+        for (int i = 0; i < ValueSize; i++) {
+            valuePrefixBuilder.append('&');
+        }
+        String valuePrefix = valuePrefixBuilder.toString();
+
+        final int[] LoopCounts = new int[] {1000, 10000, 50000};
+        for (int LoopCount : LoopCounts) {
+            System.out.println(String.format("[Key Count %6d] avg lat:", LoopCount));
+            map.clear();
+            assert(map.size() == 0);
+            Map<String, Long> latencies = new HashMap<>();
+
+            // CREATE:
+            long start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                PersistentString val = new PersistentString(valuePrefix + l);
+                PersistentString out = map.put(key, val);
+                if (out != null) {
+                    System.out.println(String.format("CREATING key %s failed, out = %s", keyPrefix + l, out.toString()));
+                }
+                assert(out == null);
+            }
+            latencies.put("CREATE", (System.nanoTime() - start) / LoopCount);
+
+            // GET
+            start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                assert(map.get(key).toString().equals(valuePrefix + l));
+            }
+            latencies.put("GET", (System.nanoTime() - start) / LoopCount);
+
+            // UPDATE
+            start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                PersistentString val = new PersistentString(valuePrefix);
+                PersistentString out = map.put(key, val);
+                assert(out.toString().equals(valuePrefix + l));
+            }
+            latencies.put("UPDATE", (System.nanoTime() - start) / LoopCount);
+
+            // DELETE
+            start = System.nanoTime();
+            for (int l = 0; l < LoopCount; l++) {
+                PersistentString key = new PersistentString(keyPrefix + l);
+                PersistentString out = map.remove(key);
+            }
+            latencies.put("DELETE", (System.nanoTime() - start) / LoopCount);
+
+            for (Map.Entry<String, Long> lat : latencies.entrySet()) {
+                System.out.println(String.format("\t%8s : %8d (us)", lat.getKey(), lat.getValue() / 1000));
+            }
+        }
+
+        map.clear();
         return true;
     }
 
@@ -122,6 +234,32 @@ static boolean verbose = false;
         assert(map.size() == 0);
         assert(map.isEmpty() == true);
 
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static boolean testReplace() {
+        if (verbose) System.out.println("****************Testing replace************************");
+
+        PersistentSkipListMap<PersistentInteger, PersistentString> map = getSkipListMap();
+
+        final PersistentString emptyStr = new PersistentString("");
+        PersistentInteger key = new PersistentInteger(100);
+        PersistentString val = new PersistentString("world");
+        PersistentString update = new PersistentString("new world");
+
+        map.put(key, emptyStr);
+
+        PersistentString oldValue = map.replace(key, val);
+        assert(emptyStr.compareTo(oldValue) == 0);
+        assert(val.compareTo(map.get(key)) == 0);
+
+        oldValue = map.replace(key, update);
+        assert(oldValue != null);
+        assert(oldValue.compareTo(val) == 0);
+        PersistentString cur = map.get(key);
+        assert(update.compareTo(cur) == 0);
+        map.remove(key);
         return true;
     }
 
